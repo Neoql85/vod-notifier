@@ -8,12 +8,14 @@ from email.mime.multipart import MIMEMultipart
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import urllib.parse
 
 load_dotenv()
 
 PROVIDERS = {
     "HBO Max": 1,
     "Canal+": 20,
+    "Canal+ (dodatkowe)": 5,
     "Amazon Prime": 8
 }
 
@@ -55,8 +57,11 @@ def get_movie_rating(film_id):
         print(f"Błąd podczas pobierania oceny dla {film_id}: {e}")
     return 0.0
 
-def is_horror_or_thriller(film_id):
-    url = f"https://www.filmweb.pl/film/-{film_id}"
+def is_horror_or_thriller(film_id, title, year):
+    # Construct proper Filmweb URL
+    formatted_title = urllib.parse.quote_plus(title)
+    url = f"https://www.filmweb.pl/film/{formatted_title}-{year}-{film_id}"
+    
     headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers)
@@ -95,21 +100,25 @@ def check_movies_and_send_email():
             rating = get_movie_rating(film_id)
             if rating is None or rating <= 6.0:
                 continue
+            
+            info = get_movie_info(film_id)
+            if not info:
+                continue
                 
-            if is_horror_or_thriller(film_id):
-                info = get_movie_info(film_id)
-                title = info.get('title', 'Nieznany tytuł') if info else 'Nieznany tytuł'
+            title = info.get('title', 'Nieznany tytuł')
+            year = info.get('year', '')
                 
+            if is_horror_or_thriller(film_id, title, year):
                 movie_data = {
                     'title': title,
                     'rating': round(rating, 2),
                     'provider': provider_name,
-                    'url': f"https://www.filmweb.pl/film/-{film_id}"
+                    'url': f"https://www.filmweb.pl/film/{urllib.parse.quote_plus(title)}-{year}-{film_id}"
                 }
                 recommended_movies.append(movie_data)
                 print(f"Znaleziono: {title} ({rating}) na {provider_name}")
                 
-            time.sleep(1) # Zabezpieczenie przed zablokowaniem
+            time.sleep(0.5) # Zabezpieczenie przed zablokowaniem
             
     if recommended_movies:
         send_email(recommended_movies)
@@ -147,8 +156,7 @@ if __name__ == "__main__":
     # Ustawienie harmonogramu
     schedule.every().friday.at("16:00").do(check_movies_and_send_email)
     
-    # Możesz odkomentować poniższą linię, aby przetestować działanie od razu po uruchomieniu
-    # check_movies_and_send_email()
+    check_movies_and_send_email()
     
     while True:
         schedule.run_pending()
