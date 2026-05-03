@@ -130,17 +130,28 @@ def send_email(movies):
         print("Brak konfiguracji email. Ustaw WP_EMAIL, WP_PASSWORD i GMAIL_EMAIL w pliku .env")
         return
         
-    msg = MIMEMultipart()
+    from email.utils import formatdate
+    
+    msg = MIMEMultipart('alternative')
     msg['From'] = WP_EMAIL
     msg['To'] = GMAIL_EMAIL
-    msg['Subject'] = "Nowe Horrory i Thrillery na VOD (Filmweb > 6.0)"
+    msg['Subject'] = "Nowości VOD: Twoje cotygodniowe zestawienie filmowe"
+    msg['Date'] = formatdate(localtime=True)
     
-    html = "<h2>Nowo dodane filmy (Ostatnie 7 dni)</h2><ul>"
+    text = "Nowo dodane filmy (Ostatnie 7 dni):\n\n"
+    html = "<html><body><h2>Nowo dodane filmy (Ostatnie 7 dni)</h2><ul>"
+    
     for m in movies:
-        html += f"<li><b>{m['title']}</b> (Ocena: {m['rating']}) - {m['provider']} <br><a href='{m['url']}'>Link do Filmweb</a></li><br>"
-    html += "</ul>"
+        text += f"- {m['title']} (Ocena: {m['rating']}) na {m['provider']}\nLink: {m['url']}\n\n"
+        html += f"<li><b>{m['title']}</b> (Ocena: {m['rating']}) - {m['provider']} <br><a href='{m['url']}'>Link do strony filmu</a></li><br>"
+        
+    html += "</ul></body></html>"
     
-    msg.attach(MIMEText(html, 'html'))
+    part1 = MIMEText(text, 'plain', 'utf-8')
+    part2 = MIMEText(html, 'html', 'utf-8')
+    
+    msg.attach(part1)
+    msg.attach(part2)
     
     try:
         server = smtplib.SMTP_SSL('smtp.wp.pl', 465)
