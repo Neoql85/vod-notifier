@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+graphql*.json
+test_*.py
+filmweb_test.html
