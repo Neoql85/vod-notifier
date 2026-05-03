@@ -163,12 +163,18 @@ def send_email(movies):
         print(f"Błąd podczas wysyłania e-maila: {e}")
 
 if __name__ == "__main__":
-    print("Program został uruchomiony. E-maile będą wysyłane w każdy piątek o 16:00.")
-    # Ustawienie harmonogramu
-    schedule.every().friday.at("16:00").do(check_movies_and_send_email)
-    
-    check_movies_and_send_email()
-    
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    # Jeśli skrypt jest uruchamiany w środowisku GitHub Actions, wykonaj go raz i zakończ
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        print("Uruchomienie w środowisku GitHub Actions. Wykonywanie skryptu jednorazowo...")
+        check_movies_and_send_email()
+    else:
+        print("Program został uruchomiony lokalnie. E-maile będą wysyłane w każdy piątek o 16:00.")
+        # Ustawienie harmonogramu
+        schedule.every().friday.at("16:00").do(check_movies_and_send_email)
+        
+        # Opcjonalnie: odkomentuj poniższą linię, aby wymusić testowe wykonanie zaraz po starcie
+        # check_movies_and_send_email()
+        
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
